@@ -1,228 +1,429 @@
-☁️ AWS VPC Peering Project Report
+# ☁️ AWS VPC Peering Project: Private Cross-VPC Connectivity
 
-[![Project](https# ☁️ AWS VPC Peering Project: Private Cross-VPC Connectivity
+A hands-on AWS networking project demonstrating how to connect two Amazon Virtual Private Clouds (VPCs) using **VPC Peering** for private IPv4 communication without routing traffic through the public internet.
 
-Connecting two Virtual Private Clouds (VPCs) via a VPC peering connection for private IPv4 communication without using the public internet[cite: 1, 3].
+## 📌 Project Overview
 
-📄 Project Overview
-Programme: EWB Courses, AWS Architect Associate (Project 01, Oct 2026)[cite: 1]
+| Detail | Description |
+|---|---|
+| Project | AWS VPC Peering |
+| Programme | EWB Courses – AWS Architect Associate |
+| Project Number | Project 01 |
+| Region | Asia Pacific (Sydney) |
+| AWS Region Code | `ap-southeast-2` |
+| Completion Date | 18 October 2026 |
+| VPCs | 2 |
+| Subnets | 3 |
+| EC2 Instances | 2 × `t3.micro` |
+| Peering Connection | 1 active connection |
 
-Region: Asia Pacific (Sydney), ap-southeast-2[cite: 1]
+## 🎯 Objectives
 
-Completed Date: 18 October 2026[cite: 1]
+- Establish private communication between two separate AWS VPCs.
+- Design non-overlapping VPC and subnet CIDR ranges.
+- Configure public and private subnets with appropriate route tables.
+- Create and activate a VPC peering connection.
+- Configure security groups following the principle of least privilege.
+- Verify private connectivity using ICMP ping and SSH.
+- Understand routing, network isolation, and AWS security controls.
 
-Key Components: 2 VPCs, 3 subnets, 1 active peering connection, 2 t3.micro EC2 instances[cite: 1, 2]
+## 🏗️ Architecture
 
-🎯 Objective
-The goal of this project was to connect two separate AWS Virtual Private Clouds (VPCs) with a VPC peering connection so that workloads in each VPC can talk to each other over private IPv4 addresses, without using the public internet[cite: 3].
+The project uses two VPCs connected through a VPC peering connection.
 
-What this project demonstrates:
+- **VPC A (`ewb-vpc-a`)** contains one public subnet and one private subnet.
+- **VPC B (`ewb-vpc-b`)** contains one private subnet and has no internet gateway.
+- Both VPCs use private IPv4 CIDR ranges.
+- Routes in both VPCs direct cross-VPC traffic through the peering connection.
+- An internet gateway is attached only to VPC A.
 
-Planning non-overlapping VPC and subnet CIDR ranges[cite: 3].
+### Architecture Diagram
 
-Creating public and private subnets with explicit route table associations[cite: 3].
+```mermaid
+flowchart TB
+    Internet((Internet))
+    IGW[Internet Gateway<br/>ewb-igw-a]
 
-Requesting, accepting, and activating a peering connection, then adding routes on both sides[cite: 3].
+    subgraph A["VPC A — ewb-vpc-a<br/>10.10.0.0/16"]
+        AP["Public Subnet<br/>10.10.1.0/24"]
+        APR["Private Subnet<br/>10.10.2.0/24"]
+        EC2A["EC2 Instance A<br/>ewb-ec2-a"]
+    end
 
-Launching EC2 instances in two VPCs and verifying private connectivity[cite: 3].
+    subgraph B["VPC B — ewb-vpc-b<br/>10.20.0.0/16"]
+        BP["Private Subnet<br/>10.20.1.0/24"]
+        EC2B["EC2 Instance B<br/>ewb-ec2-b"]
+    end
 
-📐 Architecture & Address Plan
-VPC A (10.10.0.0/16) holds a public and a private subnet and is the only VPC with an internet gateway[cite: 3]. VPC B (10.20.0.0/16) has a single private subnet and no internet gateway[cite: 3]. A peering connection links the two VPCs, so the private subnets reach each other directly using private IP addresses[cite: 3].
+    Internet <--> IGW
+    IGW --- AP
+    APR --- EC2A
+    BP --- EC2B
+    EC2A <-->|Private IPv4 via VPC Peering| EC2B
 
-Plaintext
-               Internet gateway: ewb-igw-a
-                        to the Internet
-                              │
-                    VPC A (ewb-vpc-a)
-                     10.10.0.0/16
-             ┌───────────────────────────┐
-             │ Public subnet             │
-             │ ewb-a-public (10.10.1.0/24)│
-             │ 0.0.0.0/0 -> IGW          │
-             │ 10.20.0.0/16 -> pcx       │
-             ├───────────────────────────┤
-             │ Private subnet            │
-             │ ewb-a-private (10.10.2.0/24)
-             │ 10.20.0.0/16 -> pcx       │
-             └─────────────┬─────────────> PEERING
-                           │              ewb-a-b-peer
-             EC2: ewb-ec2-a               (pcx-0ee8e4be0ede9ba99)
-                           │                        │
-───────────────────────────┼────────────────────────┼──────────────────────────
-                           │                        ▼
-                           │             VPC B (ewb-vpc-b)
-                           │              10.20.0.0/16 (No IGW)
-                           │             ┌───────────────────────────┐
-                           └────────────►│ Private subnet            │
-                                         │ ewb-b-private (10.20.1.0/24)
-                                         │ 10.10.0.0/16 -> pcx       │
-                                         └─────────────┬─────────────┘
-                                                       │
-                                                 EC2: ewb-ec2-b
-Note: Peering does not give VPC B internet access through VPC A[cite: 3].
+    style A fill:#e8f2ff,stroke:#3678b8
+    style B fill:#eaf8e9,stroke:#34854a
+```
 
-📌 Address Table
-Resource (Name tag)	Placement	IPv4 CIDR
-ewb-vpc-a	VPC A	10.10.0.0/16[cite: 3]
-ewb-a-public	VPC A, public subnet	10.10.1.0/24[cite: 3]
-ewb-a-private	VPC A, private subnet	10.10.2.0/24[cite: 3]
-ewb-vpc-b	VPC B	10.20.0.0/16[cite: 3]
-ewb-b-private	VPC B, private subnet	10.20.1.0/24[cite: 3]
-📊 Resource Inventory
-Resource	Name	ID / Detail
-VPC A	ewb-vpc-a	vpc-0e13b1275c4404f86 (10.10.0.0/16)[cite: 4]
-VPC B	ewb-vpc-b	vpc-0b570eaf09596cbfa (10.20.0.0/16)[cite: 4]
-Subnet	ewb-a-public	subnet-093184ce1cf20194c (10.10.1.0/24)[cite: 4]
-Subnet	ewb-a-private	subnet-0c3c48d885ebe... (10.10.2.0/24)[cite: 4]
-Subnet	ewb-b-private	subnet-09aac6debd58277e4 (10.20.1.0/24)[cite: 4]
-Internet gateway	ewb-igw-a	igw-083541cabc1ddaac6, attached to ewb-vpc-a[cite: 4]
-Route table	ewb-rt-a-public	rtb-0f1d18e9fea198201, associated with ewb-a-public[cite: 4]
-Route table	ewb-rt-a-private	Created in VPC A for ewb-a-private[cite: 4]
-Route table	ewb-rt-b-private	rtb-0a50e327a9e62155e, associated with ewb-b-private[cite: 4]
-Peering connection	ewb-a-b-peer	pcx-0ee8e4be0ede9ba99, status Active[cite: 4]
-EC2 instance	ewb-ec2-a	i-0b2fa2f3b7306a262, t3.micro, ap-southeast-2a[cite: 4]
-EC2 instance	ewb-ec2-b	i-08a657c4b1065e30b, t3.micro, ap-southeast-2a[cite: 4]
-🛠️ Implementation Steps
-Build Order
-VPC A and VPC B[cite: 4]
+**Important:** VPC peering provides private connectivity between the two VPCs. It does not automatically provide internet access to VPC B through VPC A.
 
-Subnets (3)[cite: 4]
+## 📐 IP Address Plan
 
-Internet gateway[cite: 4]
+| Resource | VPC | IPv4 CIDR |
+|---|---|---|
+| `ewb-vpc-a` | VPC A | `10.10.0.0/16` |
+| `ewb-a-public` | VPC A | `10.10.1.0/24` |
+| `ewb-a-private` | VPC A | `10.10.2.0/24` |
+| `ewb-vpc-b` | VPC B | `10.20.0.0/16` |
+| `ewb-b-private` | VPC B | `10.20.1.0/24` |
 
-Route tables[cite: 4]
+The VPC CIDR ranges do not overlap, allowing the VPCs to communicate through peering.
 
-Peering request[cite: 4]
+## 🧰 AWS Services Used
 
-Peer routes[cite: 4]
+- **Amazon VPC:** Creates isolated virtual networks.
+- **VPC Peering:** Connects the two VPCs privately.
+- **Amazon EC2:** Hosts the test instances.
+- **Subnets:** Separate public and private resources.
+- **Internet Gateway:** Provides internet connectivity for the public subnet in VPC A.
+- **Route Tables:** Control traffic destinations.
+- **Security Groups:** Apply stateful, instance-level traffic filtering.
+- **Network ACLs:** Apply stateless, subnet-level traffic filtering.
+- **AWS CLI:** Supports infrastructure configuration, verification, and cleanup.
 
-EC2 instances[cite: 4]
+## ⚙️ Implementation Steps
 
-SG rules and tests[cite: 4]
+### Step 1: Create Two VPCs
 
-Route Table Configurations
-Route table	Destination	Target	Purpose
-ewb-rt-a-private	10.10.0.0/16	local	VPC A internal traffic[cite: 10]
-ewb-rt-a-private	10.20.0.0/16	pcx (ewb-a-b-peer)	Forward path from VPC A to VPC B[cite: 10]
-ewb-rt-b-private	10.20.0.0/16	local	VPC B internal traffic[cite: 10]
-ewb-rt-b-private	10.10.0.0/16	pcx (ewb-a-b-peer)	Return path from VPC B to VPC A[cite: 10]
-ewb-rt-a-public	10.10.0.0/16	local	VPC A internal traffic[cite: 10]
-ewb-rt-a-public	0.0.0.0/0	igw (ewb-igw-a)	Internet access for public subnet[cite: 10]
-ewb-rt-a-public	10.20.0.0/16	pcx (ewb-a-b-peer)	Public subnet to VPC B[cite: 10]
-🛡️ Security Design
-Security groups act as stateful firewalls[cite: 12]. Inbound rules follow the principle of least privilege: only specific lab hosts are allowed, with nothing opened to 0.0.0.0/0[cite: 12].
+Create the following VPCs in `ap-southeast-2`:
 
-Security group	Type/port	Source
-ewb-sg-app-a (VPC A)	Custom ICMP IPv4, Echo request	Private IP of instance in VPC B (/32)[cite: 12]
-ewb-sg-app-a (VPC A)	SSH/TCP 22	Private IP of administration host (/32)[cite: 12]
-ewb-sg-app-b (VPC B)	Custom ICMP IPv4, Echo request	Private IP of instance in VPC A (/32)[cite: 12]
-ewb-sg-app-b (VPC B)	SSH/TCP 22	Private IP of administration host (/32)[cite: 12]
-Layers a Packet Must Pass
-Route table: Is there a route?[cite: 12]
+- VPC A: `10.10.0.0/16`
+- VPC B: `10.20.0.0/16`
 
-Network ACL: Subnet level, stateless (Default NACL allows all)[cite: 12].
+Assign the corresponding Name tags:
 
-Security group: Instance level, stateful (Inbound denied by default)[cite: 12].
+- `ewb-vpc-a`
+- `ewb-vpc-b`
 
-Instance OS: Host firewall and service (e.g., sshd must be running)[cite: 12].
+### Step 2: Create the Subnets
 
-🧪 Testing and Verification
-Test	Where/command	Expected result
-01 Baseline	ewb-ec2-a, before peering routes: ping -c 4 <private IP of ewb-ec2-b>	No replies[cite: 13]
-02 Forward path	ewb-ec2-a, after routes: ping -c 4 <private IP of ewb-ec2-b>	4 replies, 0% packet loss[cite: 13]
-03 Reverse path	ewb-ec2-b, after routes: ping -c 4 <private IP of ewb-ec2-a>	4 replies, 0% packet loss[cite: 13]
-04 Private SSH	SSH to ewb-ec2-b through bastion path	Shell on ewb-ec2-b[cite: 13]
-05 Isolation	EC2 instance details of both private hosts	No public IPv4 address[cite: 13]
-06 Controlled failure	Remove ICMP Echo rule on ewb-sg-app-b, ping, then restore rule	Replies stop, then resume[cite: 13]
-Bash
-# Find private IP of local instance
+Create three subnets:
+
+1. `ewb-a-public` — `10.10.1.0/24`
+2. `ewb-a-private` — `10.10.2.0/24`
+3. `ewb-b-private` — `10.20.1.0/24`
+
+Associate each subnet with the appropriate route table.
+
+### Step 3: Configure the Internet Gateway
+
+Create an internet gateway named `ewb-igw-a` and attach it to VPC A.
+
+Configure the public subnet's route table with:
+
+```text
+Destination       Target
+10.10.0.0/16      local
+0.0.0.0/0         Internet Gateway
+10.20.0.0/16      VPC Peering Connection
+```
+
+The default route enables internet-bound traffic from the public subnet through the internet gateway, subject to the necessary subnet and instance configuration.
+
+### Step 4: Create the VPC Peering Connection
+
+Create a peering connection between VPC A and VPC B.
+
+- Requester: `ewb-vpc-a`
+- Accepter: `ewb-vpc-b`
+- Name: `ewb-a-b-peer`
+
+Accept the peering request and verify that its status is **Active**.
+
+### Step 5: Configure the Route Tables
+
+Add routes to both VPCs so that traffic can travel in both directions.
+
+| Route table | Destination | Target |
+|---|---|---|
+| `ewb-rt-a-private` | `10.10.0.0/16` | Local |
+| `ewb-rt-a-private` | `10.20.0.0/16` | Peering connection |
+| `ewb-rt-b-private` | `10.20.0.0/16` | Local |
+| `ewb-rt-b-private` | `10.10.0.0/16` | Peering connection |
+| `ewb-rt-a-public` | `10.10.0.0/16` | Local |
+| `ewb-rt-a-public` | `0.0.0.0/0` | Internet gateway |
+| `ewb-rt-a-public` | `10.20.0.0/16` | Peering connection |
+
+**Key point:** Both sides need the appropriate routes. A route in only one VPC is insufficient for bidirectional communication.
+
+### Step 6: Launch EC2 Instances
+
+Launch two EC2 instances using the `t3.micro` instance type.
+
+| Instance | VPC | Subnet |
+|---|---|---|
+| `ewb-ec2-a` | VPC A | Private subnet |
+| `ewb-ec2-b` | VPC B | Private subnet |
+
+Use the same AWS Region and configure the instances with suitable security groups. The test instances should not require public IPv4 addresses for private VPC-to-VPC communication.
+
+### Step 7: Configure Security Groups
+
+Configure inbound rules for the two application security groups.
+
+| Security group | Protocol | Allowed source |
+|---|---|---|
+| `ewb-sg-app-a` | ICMP Echo Request | Private IPv4 address of Instance B (`/32`) |
+| `ewb-sg-app-a` | SSH, TCP 22 | Private IPv4 address of the authorized administration host (`/32`) |
+| `ewb-sg-app-b` | ICMP Echo Request | Private IPv4 address of Instance A (`/32`) |
+| `ewb-sg-app-b` | SSH, TCP 22 | Private IPv4 address of the authorized administration host (`/32`) |
+
+Apply the principle of least privilege. Do not open SSH or ICMP to `0.0.0.0/0` unnecessarily.
+
+Also verify that the network ACLs and operating-system firewalls allow the required traffic.
+
+## 🧪 Testing and Verification
+
+### 1. Check the Instance's Private IP
+
+Run on an EC2 instance:
+
+```bash
 hostname -I
+```
 
-# Tests 02 and 03
-ping -c 4 <peer-private-ip>
+Record the private IPv4 addresses of both instances.
 
-# Test 04: SSH via Bastion Host
-ssh -i <key>.pem -J ec2-user@<admin-host-ip> ec2-user@<ewb-ec2-b-private-ip>
+### 2. Test Private Connectivity
 
-# Test 05: Confirm no public address via AWS CLI
-aws ec2 describe-instances --instance-ids i-0b2fa2f3b7306a262 i-08a657c4b1065e30b \
-  --query 'Reservations[].Instances[].[InstanceId,PublicIpAddress,PrivateIpAddress]' --output table
-💻 AWS CLI Equivalent Setup
-Bash
-# VPC A, subnets and internet gateway
+From Instance A, ping the private IPv4 address of Instance B:
+
+```bash
+ping -c 4 <INSTANCE_B_PRIVATE_IP>
+```
+
+From Instance B, test the reverse direction:
+
+```bash
+ping -c 4 <INSTANCE_A_PRIVATE_IP>
+```
+
+Replace the placeholders with the actual private IPv4 addresses.
+
+**Expected result:** Four replies with `0% packet loss` in each direction when routes, security groups, network ACLs, and host firewalls permit ICMP.
+
+### 3. Test SSH Connectivity
+
+SSH into Instance B using an authorized bastion host or another permitted administration path:
+
+```bash
+ssh -i <KEY_FILE.pem> \
+  -J ec2-user@<BASTION_HOST> \
+  ec2-user@<INSTANCE_B_PRIVATE_IP>
+```
+
+Replace the placeholders with the actual key file, bastion address, and destination private IP. This command assumes an appropriate bastion host, SSH key, and security-group rules are configured.
+
+### 4. Verify Private-Only Instances
+
+Using the AWS CLI:
+
+```bash
+aws ec2 describe-instances \
+  --instance-ids <INSTANCE_A_ID> <INSTANCE_B_ID> \
+  --query 'Reservations[].Instances[].[InstanceId,PublicIpAddress,PrivateIpAddress]' \
+  --output table \
+  --region ap-southeast-2
+```
+
+Confirm that the private test instances have no public IPv4 addresses.
+
+### 5. Perform a Controlled Failure Test
+
+1. Remove the ICMP Echo Request inbound rule from `ewb-sg-app-b`.
+2. Ping Instance B from Instance A.
+3. Verify that the ping requests fail.
+4. Restore the security-group rule.
+5. Repeat the test and confirm that connectivity resumes.
+
+This experiment demonstrates how security-group rules control communication even when the VPC peering connection and routes are active.
+
+## 📊 Test Results
+
+| Test | Expected result |
+|---|---|
+| Baseline before peering routes | No replies |
+| Forward path after route configuration | 4 replies, 0% packet loss |
+| Reverse path after route configuration | 4 replies, 0% packet loss |
+| SSH through the authorized bastion path | Shell access to Instance B |
+| Public IP verification | No public IPv4 addresses on the private test instances |
+| ICMP rule removed | Ping fails |
+| ICMP rule restored | Ping resumes |
+
+These are the expected outcomes documented for the project; actual results should be confirmed in the AWS environment.
+
+## 💻 AWS CLI Examples
+
+The following examples illustrate the main infrastructure creation steps. Run them in an AWS CLI environment with suitable permissions and a configured account.
+
+### Set the AWS Region
+
+```bash
 export AWS_DEFAULT_REGION=ap-southeast-2
-VPC_A=$(aws ec2 create-vpc --cidr-block 10.10.0.0/16 --query Vpc.VpcId --output text)
-aws ec2 create-tags --resources $VPC_A --tags Key=Name,Value=ewb-vpc-a
+```
 
-SUB_A_PUB=$(aws ec2 create-subnet --vpc-id $VPC_A --cidr-block 10.10.1.0/24 \
-  --availability-zone ap-southeast-2a --query Subnet.SubnetId --output text)
-SUB_A_PRIV=$(aws ec2 create-subnet --vpc-id $VPC_A --cidr-block 10.10.2.0/24 \
-  --availability-zone ap-southeast-2a --query Subnet.SubnetId --output text)
+### Create VPC A
 
-IGW=$(aws ec2 create-internet-gateway --query InternetGateway.InternetGatewayId --output text)
-aws ec2 attach-internet-gateway --internet-gateway-id $IGW --vpc-id $VPC_A
+```bash
+VPC_A=$(aws ec2 create-vpc \
+  --cidr-block 10.10.0.0/16 \
+  --query 'Vpc.VpcId' \
+  --output text)
 
-# Route tables in VPC A
-RT_A_PUB=$(aws ec2 create-route-table --vpc-id $VPC_A --query RouteTable.RouteTableId --output text)
-aws ec2 associate-route-table --route-table-id $RT_A_PUB --subnet-id $SUB_A_PUB
-aws ec2 create-route --route-table-id $RT_A_PUB --destination-cidr-block 0.0.0.0/0 --gateway-id $IGW
+aws ec2 create-tags \
+  --resources "$VPC_A" \
+  --tags Key=Name,Value=ewb-vpc-a
+```
 
-RT_A_PRIV=$(aws ec2 create-route-table --vpc-id $VPC_A --query RouteTable.RouteTableId --output text)
-aws ec2 associate-route-table --route-table-id $RT_A_PRIV --subnet-id $SUB_A_PRIV
+### Create VPC A Subnets
 
-# VPC B, subnet and route table
-VPC_B=$(aws ec2 create-vpc --cidr-block 10.20.0.0/16 --query Vpc.VpcId --output text)
-aws ec2 create-tags --resources $VPC_B --tags Key=Name,Value=ewb-vpc-b
+```bash
+SUB_A_PUB=$(aws ec2 create-subnet \
+  --vpc-id "$VPC_A" \
+  --cidr-block 10.10.1.0/24 \
+  --availability-zone ap-southeast-2a \
+  --query 'Subnet.SubnetId' \
+  --output text)
 
-SUB_B=$(aws ec2 create-subnet --vpc-id $VPC_B --cidr-block 10.20.1.0/24 \
-  --availability-zone ap-southeast-2a --query Subnet.SubnetId --output text)
-RT_B=$(aws ec2 create-route-table --vpc-id $VPC_B --query RouteTable.RouteTableId --output text)
-aws ec2 associate-route-table --route-table-id $RT_B --subnet-id $SUB_B
+SUB_A_PRIV=$(aws ec2 create-subnet \
+  --vpc-id "$VPC_A" \
+  --cidr-block 10.10.2.0/24 \
+  --availability-zone ap-southeast-2a \
+  --query 'Subnet.SubnetId' \
+  --output text)
+```
 
-# Peering connection and routes
-PCX=$(aws ec2 create-vpc-peering-connection --vpc-id $VPC_A --peer-vpc-id $VPC_B \
-  --query VpcPeeringConnection.VpcPeeringConnectionId --output text)
-aws ec2 accept-vpc-peering-connection --vpc-peering-connection-id $PCX
+### Create and Attach the Internet Gateway
 
-aws ec2 create-route --route-table-id $RT_A_PRIV --destination-cidr-block 10.20.0.0/16 \
-  --vpc-peering-connection-id $PCX
-aws ec2 create-route --route-table-id $RT_A_PUB --destination-cidr-block 10.20.0.0/16 \
-  --vpc-peering-connection-id $PCX
-aws ec2 create-route --route-table-id $RT_B --destination-cidr-block 10.10.0.0/16 \
-  --vpc-peering-connection-id $PCX
-🧹 Cleanup Script
-Bash
-aws ec2 terminate-instances --instance-ids i-0b2fa2f3b7306a262 i-08a657c4b1065e30b
-# Wait until instances show "terminated"
+```bash
+IGW=$(aws ec2 create-internet-gateway \
+  --query 'InternetGateway.InternetGatewayId' \
+  --output text)
 
-aws ec2 delete-route --route-table-id $RT_A_PRIV --destination-cidr-block 10.20.0.0/16
-aws ec2 delete-route --route-table-id $RT_A_PUB --destination-cidr-block 10.20.0.0/16
-aws ec2 delete-route --route-table-id $RT_B --destination-cidr-block 10.10.0.0/16
+aws ec2 attach-internet-gateway \
+  --internet-gateway-id "$IGW" \
+  --vpc-id "$VPC_A"
+```
 
-aws ec2 delete-vpc-peering-connection --vpc-peering-connection-id pcx-0ee8e4be0ede9ba99
-aws ec2 delete-security-group --group-id $SG_A
-aws ec2 delete-security-group --group-id $SG_B
+### Create VPC B and Its Private Subnet
 
-aws ec2 delete-subnet --subnet-id $SUB_A_PUB
-aws ec2 delete-subnet --subnet-id $SUB_A_PRIV
-aws ec2 delete-subnet --subnet-id $SUB_B
+```bash
+VPC_B=$(aws ec2 create-vpc \
+  --cidr-block 10.20.0.0/16 \
+  --query 'Vpc.VpcId' \
+  --output text)
 
-aws ec2 delete-route-table --route-table-id $RT_A_PUB
-aws ec2 delete-route-table --route-table-id $RT_A_PRIV
-aws ec2 delete-route-table --route-table-id $RT_B
+aws ec2 create-tags \
+  --resources "$VPC_B" \
+  --tags Key=Name,Value=ewb-vpc-b
 
-aws ec2 detach-internet-gateway --internet-gateway-id $IGW --vpc-id $VPC_A
-aws ec2 delete-internet-gateway --internet-gateway-id $IGW
+SUB_B=$(aws ec2 create-subnet \
+  --vpc-id "$VPC_B" \
+  --cidr-block 10.20.1.0/24 \
+  --availability-zone ap-southeast-2a \
+  --query 'Subnet.SubnetId' \
+  --output text)
+```
 
-aws ec2 delete-vpc --vpc-id $VPC_A
-aws ec2 delete-vpc --vpc-id $VPC_B
-🧠 Key Takeaways
-Peering creates the link; routes, network ACLs, and security groups decide what crosses it[cite: 18].
+### Create the Peering Connection
 
-Routes are needed in both directions, and the most specific route always wins[cite: 18].
+```bash
+PCX=$(aws ec2 create-vpc-peering-connection \
+  --vpc-id "$VPC_A" \
+  --peer-vpc-id "$VPC_B" \
+  --query 'VpcPeeringConnection.VpcPeeringConnectionId' \
+  --output text)
 
-Peering is non-transitive and never shares an internet gateway[cite: 18].
+aws ec2 accept-vpc-peering-connection \
+  --vpc-peering-connection-id "$PCX"
+```
 
-Test both directions and break one rule on purpose to find which layer is responsible[cite: 18].
+### Add the Peering Routes
 
-Clean up in dependency order to avoid leftover charges[cite: 18].
+After creating and associating the appropriate route tables, add the cross-VPC routes:
+
+```bash
+aws ec2 create-route \
+  --route-table-id "$RT_A_PRIV" \
+  --destination-cidr-block 10.20.0.0/16 \
+  --vpc-peering-connection-id "$PCX"
+
+aws ec2 create-route \
+  --route-table-id "$RT_A_PUB" \
+  --destination-cidr-block 10.20.0.0/16 \
+  --vpc-peering-connection-id "$PCX"
+
+aws ec2 create-route \
+  --route-table-id "$RT_B" \
+  --destination-cidr-block 10.10.0.0/16 \
+  --vpc-peering-connection-id "$PCX"
+```
+
+**Note:** The route-table variables above must be assigned to the actual route-table IDs before these commands are executed. The examples are partial setup commands, not a complete one-shot deployment script. Security groups, EC2 instances, and the remaining configuration must also be created or configured.
+
+## 🧹 Resource Cleanup
+
+To avoid ongoing AWS charges, terminate the EC2 instances and remove the project resources when testing is complete.
+
+Recommended cleanup order:
+
+1. Terminate the EC2 instances and wait for termination to complete.
+2. Delete the cross-VPC routes.
+3. Delete the VPC peering connection.
+4. Delete the security groups after removing dependent resources.
+5. Delete the subnets.
+6. Delete custom route tables after disassociating them from subnets.
+7. Detach and delete the internet gateway.
+8. Delete both VPCs.
+
+Example command for terminating the project instances:
+
+```bash
+aws ec2 terminate-instances \
+  --instance-ids <INSTANCE_A_ID> <INSTANCE_B_ID> \
+  --region ap-southeast-2
+```
+
+Use the actual resource IDs or the environment variables from your setup. Check resource dependencies before deletion, and do not delete resources that belong to other workloads.
+
+## 🧠 Key Learnings
+
+- VPC peering enables private IPv4 communication between two VPCs.
+- VPC CIDR ranges must not overlap.
+- Correct routes are required in both directions.
+- Security groups are stateful; network ACLs are stateless.
+- The most specific matching route takes precedence.
+- VPC peering is non-transitive.
+- VPC peering does not share an internet gateway or automatically grant internet access to the peer VPC.
+- Controlled failure testing helps isolate networking and security issues.
+- Resources should be cleaned up in dependency order to prevent unnecessary charges.
+
+## 🚀 Conclusion
+
+This project demonstrates how to establish secure private communication between two AWS VPCs using VPC Peering, route tables, EC2 instances, and security groups.
+
+The implementation provides practical experience with AWS networking, IP addressing, traffic routing, access control, connectivity testing, and resource management.
+
+## 📚 References
+
+- [Amazon VPC Documentation](https://docs.aws.amazon.com/vpc/latest/userguide/what-is-amazon-vpc.html)
+- [VPC Peering Documentation](https://docs.aws.amazon.com/vpc/latest/peering/what-is-vpc-peering.html)
+- [Amazon EC2 Documentation](https://docs.aws.amazon.com/ec2/)
+- [AWS CLI Documentation](https://docs.aws.amazon.com/cli/)
+
+---
+
+
+**Project:** AWS VPC Peering – Private Cross-VPC Connectivity
+
+**Region:** `ap-southeast-2`
