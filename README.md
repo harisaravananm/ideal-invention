@@ -1,23 +1,27 @@
-# ☁️ AWS VPC Peering Project: Private Cross-VPC Connectivity
+# â˜ï¸ AWS VPC Peering Project: Private Cross-VPC Connectivity
+
+<!-- tech-version-badges -->
+![AWS VPC](https://img.shields.io/badge/AWS-VPC-232F3E?style=for-the-badge&logo=amazonaws&logoColor=white) ![VPC Peering](https://img.shields.io/badge/VPC-Peering-FF9900?style=for-the-badge&logo=amazonaws&logoColor=white) ![EC2 Verification](https://img.shields.io/badge/EC2-Verification-FF9900?style=for-the-badge&logo=amazonec2&logoColor=white) ![IPv4 Private%20network](https://img.shields.io/badge/IPv4-Private%20network-1E88E5?style=for-the-badge)
+<!-- /tech-version-badges -->
 
 A hands-on AWS networking project demonstrating how to connect two Amazon Virtual Private Clouds (VPCs) using **VPC Peering** for private IPv4 communication without routing traffic through the public internet.
 
-## 📌 Project Overview
+## ðŸ“Œ Project Overview
 
 | Detail | Description |
 |---|---|
 | Project | AWS VPC Peering |
-| Programme | EWB Courses – AWS Architect Associate |
+| Programme | EWB Courses â€“ AWS Architect Associate |
 | Project Number | Project 01 |
 | Region | Asia Pacific (Sydney) |
 | AWS Region Code | `ap-southeast-2` |
 | Completion Date | 18 October 2026 |
 | VPCs | 2 |
 | Subnets | 3 |
-| EC2 Instances | 2 × `t3.micro` |
+| EC2 Instances | 2 Ã— `t3.micro` |
 | Peering Connection | 1 active connection |
 
-## 🎯 Objectives
+## ðŸŽ¯ Objectives
 
 - Establish private communication between two separate AWS VPCs.
 - Design non-overlapping VPC and subnet CIDR ranges.
@@ -27,7 +31,7 @@ A hands-on AWS networking project demonstrating how to connect two Amazon Virtua
 - Verify private connectivity using ICMP ping and SSH.
 - Understand routing, network isolation, and AWS security controls.
 
-## 🏗️ Architecture
+## ðŸ—ï¸ Architecture
 
 The project uses two VPCs connected through a VPC peering connection.
 
@@ -44,13 +48,13 @@ flowchart TB
     Internet((Internet))
     IGW[Internet Gateway<br/>ewb-igw-a]
 
-    subgraph A["VPC A — ewb-vpc-a<br/>10.10.0.0/16"]
+    subgraph A["VPC A â€” ewb-vpc-a<br/>10.10.0.0/16"]
         AP["Public Subnet<br/>10.10.1.0/24"]
         APR["Private Subnet<br/>10.10.2.0/24"]
         EC2A["EC2 Instance A<br/>ewb-ec2-a"]
     end
 
-    subgraph B["VPC B — ewb-vpc-b<br/>10.20.0.0/16"]
+    subgraph B["VPC B â€” ewb-vpc-b<br/>10.20.0.0/16"]
         BP["Private Subnet<br/>10.20.1.0/24"]
         EC2B["EC2 Instance B<br/>ewb-ec2-b"]
     end
@@ -67,7 +71,7 @@ flowchart TB
 
 **Important:** VPC peering provides private connectivity between the two VPCs. It does not automatically provide internet access to VPC B through VPC A.
 
-## 📐 IP Address Plan
+## ðŸ“ IP Address Plan
 
 | Resource | VPC | IPv4 CIDR |
 |---|---|---|
@@ -79,7 +83,7 @@ flowchart TB
 
 The VPC CIDR ranges do not overlap, allowing the VPCs to communicate through peering.
 
-## 🧰 AWS Services Used
+## ðŸ§° AWS Services Used
 
 - **Amazon VPC:** Creates isolated virtual networks.
 - **VPC Peering:** Connects the two VPCs privately.
@@ -91,7 +95,7 @@ The VPC CIDR ranges do not overlap, allowing the VPCs to communicate through pee
 - **Network ACLs:** Apply stateless, subnet-level traffic filtering.
 - **AWS CLI:** Supports infrastructure configuration, verification, and cleanup.
 
-## ⚙️ Implementation Steps
+## âš™ï¸ Implementation Steps
 
 ### Step 1: Create Two VPCs
 
@@ -109,9 +113,9 @@ Assign the corresponding Name tags:
 
 Create three subnets:
 
-1. `ewb-a-public` — `10.10.1.0/24`
-2. `ewb-a-private` — `10.10.2.0/24`
-3. `ewb-b-private` — `10.20.1.0/24`
+1. `ewb-a-public` â€” `10.10.1.0/24`
+2. `ewb-a-private` â€” `10.10.2.0/24`
+3. `ewb-b-private` â€” `10.20.1.0/24`
 
 Associate each subnet with the appropriate route table.
 
@@ -182,7 +186,7 @@ Apply the principle of least privilege. Do not open SSH or ICMP to `0.0.0.0/0` u
 
 Also verify that the network ACLs and operating-system firewalls allow the required traffic.
 
-## 🧪 Testing and Verification
+## ðŸ§ª Testing and Verification
 
 ### 1. Check the Instance's Private IP
 
@@ -248,7 +252,7 @@ Confirm that the private test instances have no public IPv4 addresses.
 
 This experiment demonstrates how security-group rules control communication even when the VPC peering connection and routes are active.
 
-## 📊 Test Results
+## ðŸ“Š Test Results
 
 | Test | Expected result |
 |---|---|
@@ -262,7 +266,7 @@ This experiment demonstrates how security-group rules control communication even
 
 These are the expected outcomes documented for the project; actual results should be confirmed in the AWS environment.
 
-## 💻 AWS CLI Examples
+## ðŸ’» AWS CLI Examples
 
 The following examples illustrate the main infrastructure creation steps. Run them in an AWS CLI environment with suitable permissions and a configured account.
 
@@ -371,7 +375,7 @@ aws ec2 create-route \
 
 **Note:** The route-table variables above must be assigned to the actual route-table IDs before these commands are executed. The examples are partial setup commands, not a complete one-shot deployment script. Security groups, EC2 instances, and the remaining configuration must also be created or configured.
 
-## 🧹 Resource Cleanup
+## ðŸ§¹ Resource Cleanup
 
 To avoid ongoing AWS charges, terminate the EC2 instances and remove the project resources when testing is complete.
 
@@ -396,7 +400,7 @@ aws ec2 terminate-instances \
 
 Use the actual resource IDs or the environment variables from your setup. Check resource dependencies before deletion, and do not delete resources that belong to other workloads.
 
-## 🧠 Key Learnings
+## ðŸ§  Key Learnings
 
 - VPC peering enables private IPv4 communication between two VPCs.
 - VPC CIDR ranges must not overlap.
@@ -408,13 +412,13 @@ Use the actual resource IDs or the environment variables from your setup. Check 
 - Controlled failure testing helps isolate networking and security issues.
 - Resources should be cleaned up in dependency order to prevent unnecessary charges.
 
-## 🚀 Conclusion
+## ðŸš€ Conclusion
 
 This project demonstrates how to establish secure private communication between two AWS VPCs using VPC Peering, route tables, EC2 instances, and security groups.
 
 The implementation provides practical experience with AWS networking, IP addressing, traffic routing, access control, connectivity testing, and resource management.
 
-## 📚 References
+## ðŸ“š References
 
 - [Amazon VPC Documentation](https://docs.aws.amazon.com/vpc/latest/userguide/what-is-amazon-vpc.html)
 - [VPC Peering Documentation](https://docs.aws.amazon.com/vpc/latest/peering/what-is-vpc-peering.html)
@@ -424,6 +428,6 @@ The implementation provides practical experience with AWS networking, IP address
 ---
 
 
-**Project:** AWS VPC Peering – Private Cross-VPC Connectivity
+**Project:** AWS VPC Peering â€“ Private Cross-VPC Connectivity
 
 **Region:** `ap-southeast-2`
